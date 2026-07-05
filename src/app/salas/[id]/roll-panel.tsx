@@ -1,6 +1,8 @@
 "use client";
 
-// Panel de tiradas: dados rápidos, dados personalizados, tirada compuesta y guardadas
+// Panel de tiradas (Fase 6):
+// - Jugadores: dados estándar + dados/tiradas habilitados por el anfitrión.
+// - Anfitrión: además gestiona qué dados y tiradas suyos están en la sala.
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import {
@@ -8,6 +10,7 @@ import {
   guardarTirada,
   borrarTirada,
   toggleDadoSala,
+  toggleTiradaSala,
   type DefinicionTirada,
   type ParteTirada,
 } from "./actions";
@@ -24,13 +27,15 @@ export default function RollPanel({
   guardadas,
   misDados,
   dadosSala,
+  tiradasSala,
 }: {
   roomId: string;
   cerrada: boolean;
   soyHost: boolean;
-  guardadas: Guardada[];
-  misDados: DadoPersonalizado[];
+  guardadas: Guardada[];      // tiradas personales (privadas)
+  misDados: DadoPersonalizado[]; // solo se usa siendo anfitrión
   dadosSala: DadoPersonalizado[];
+  tiradasSala: Guardada[];    // tiradas habilitadas por el anfitrión
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -38,12 +43,8 @@ export default function RollPanel({
   const [modificador, setModificador] = useState(0);
   const [nombre, setNombre] = useState("");
 
-  const idsSala = new Set(dadosSala.map((d) => d.id));
-  // Dados personalizados que puedo usar aquí: los míos + los habilitados en la sala
-  const usables = [
-    ...misDados,
-    ...dadosSala.filter((d) => !misDados.some((m) => m.id === d.id)),
-  ];
+  const idsDadosSala = new Set(dadosSala.map((d) => d.id));
+  const idsTiradasSala = new Set(tiradasSala.map((t) => t.id));
 
   function tirar(def: DefinicionTirada, label?: string) {
     setError(null);
@@ -76,6 +77,49 @@ export default function RollPanel({
       .join(" + ") +
     (modificador ? ` ${modificador > 0 ? "+" : ""}${modificador}` : "");
 
+  function filaDado(d: DadoPersonalizado, gestionable: boolean) {
+    return (
+      <li key={d.id} className="flex items-center justify-between gap-2">
+        <span className="text-sm">
+          {d.name}{" "}
+          <span className="text-xs text-slate-500">({d.faces.length}c)</span>
+          {gestionable && idsDadosSala.has(d.id) && (
+            <span className="ml-1 text-xs text-emerald-400">· en sala</span>
+          )}
+        </span>
+        <div className="flex gap-2">
+          <button
+            className="btn !px-3 !py-1"
+            disabled={pending || cerrada}
+            onClick={() =>
+              tirar({ parts: [{ die_id: d.id, count: 1, nombre: d.name }] }, d.name)
+            }
+          >
+            Tirar
+          </button>
+          <button
+            className="btn-ghost !px-3 !py-1"
+            disabled={cerrada}
+            onClick={() => agregarParte({ die_id: d.id, count: 1, nombre: d.name })}
+          >
+            + compuesta
+          </button>
+          {gestionable && (
+            <button
+              className="btn-ghost !px-3 !py-1"
+              title={idsDadosSala.has(d.id) ? "Quitar de la sala" : "Compartir con la sala"}
+              onClick={() =>
+                startTransition(() => toggleDadoSala(roomId, d.id, !idsDadosSala.has(d.id)))
+              }
+            >
+              {idsDadosSala.has(d.id) ? "🔓" : "🔒"}
+            </button>
+          )}
+        </div>
+      </li>
+    );
+  }
+
   return (
     <section className="space-y-5">
       {cerrada && (
@@ -105,81 +149,71 @@ export default function RollPanel({
         </div>
       </div>
 
-      <div className="card">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-semibold">Dados personalizados</h2>
-          <Link href="/dados" className="text-xs text-indigo-400 hover:underline">
-            Editar mis dados →
-          </Link>
+      {/* Dados de la sala (para todos los jugadores) */}
+      {(dadosSala.length > 0 || !soyHost) && (
+        <div className="card">
+          <h2 className="mb-3 font-semibold">Dados de la sala</h2>
+          {!dadosSala.length && (
+            <p className="text-sm text-slate-500">
+              El anfitrión aún no ha habilitado dados personalizados.
+            </p>
+          )}
+          <ul className="space-y-2">{dadosSala.map((d) => filaDado(d, false))}</ul>
         </div>
-        {!usables.length && (
-          <p className="text-sm text-slate-500">
-            Crea dados con símbolos en{" "}
-            <Link href="/dados" className="text-indigo-400 hover:underline">
-              Mis dados
-            </Link>
-            .
-          </p>
-        )}
-        <ul className="space-y-2">
-          {usables.map((d) => (
-            <li key={d.id} className="flex items-center justify-between gap-2">
-              <span className="text-sm">
-                {d.name}{" "}
-                <span className="text-xs text-slate-500">({d.faces.length}c)</span>
-                {idsSala.has(d.id) && (
-                  <span className="ml-1 text-xs text-emerald-400">· en sala</span>
-                )}
-              </span>
-              <div className="flex gap-2">
+      )}
+
+      {/* Tiradas de la sala (para todos los jugadores) */}
+      {(tiradasSala.length > 0 || !soyHost) && (
+        <div className="card">
+          <h2 className="mb-3 font-semibold">Tiradas de la sala</h2>
+          {!tiradasSala.length && (
+            <p className="text-sm text-slate-500">
+              El anfitrión aún no ha habilitado tiradas guardadas.
+            </p>
+          )}
+          <ul className="space-y-2">
+            {tiradasSala.map((g) => (
+              <li key={g.id} className="flex items-center justify-between gap-2">
+                <span className="text-sm">{g.name}</span>
                 <button
                   className="btn !px-3 !py-1"
                   disabled={pending || cerrada}
-                  onClick={() =>
-                    tirar(
-                      { parts: [{ die_id: d.id, count: 1, nombre: d.name }] },
-                      d.name
-                    )
-                  }
+                  onClick={() => tirar(g.definition, g.name)}
                 >
                   Tirar
                 </button>
-                <button
-                  className="btn-ghost !px-3 !py-1"
-                  disabled={cerrada}
-                  onClick={() =>
-                    agregarParte({ die_id: d.id, count: 1, nombre: d.name })
-                  }
-                >
-                  + compuesta
-                </button>
-                {soyHost && misDados.some((m) => m.id === d.id) && (
-                  <button
-                    className="btn-ghost !px-3 !py-1"
-                    title={
-                      idsSala.has(d.id)
-                        ? "Quitar de la sala"
-                        : "Compartir con la sala"
-                    }
-                    onClick={() =>
-                      startTransition(() =>
-                        toggleDadoSala(roomId, d.id, !idsSala.has(d.id))
-                      )
-                    }
-                  >
-                    {idsSala.has(d.id) ? "🔓" : "🔒"}
-                  </button>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
-        {soyHost && misDados.length > 0 && (
-          <p className="mt-2 text-xs text-slate-500">
-            🔒/🔓 comparte tus dados con todos los jugadores de la sala.
-          </p>
-        )}
-      </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Gestión del anfitrión: sus dados */}
+      {soyHost && (
+        <div className="card">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-semibold">Mis dados (anfitrión)</h2>
+            <Link href="/dados" className="text-xs text-indigo-400 hover:underline">
+              Editar mis dados →
+            </Link>
+          </div>
+          {!misDados.length && (
+            <p className="text-sm text-slate-500">
+              Crea dados en{" "}
+              <Link href="/dados" className="text-indigo-400 hover:underline">
+                Mis dados
+              </Link>{" "}
+              y compártelos aquí con 🔒/🔓.
+            </p>
+          )}
+          <ul className="space-y-2">{misDados.map((d) => filaDado(d, true))}</ul>
+          {misDados.length > 0 && (
+            <p className="mt-2 text-xs text-slate-500">
+              🔓 = habilitado para todos los jugadores de esta sala.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="card">
         <h2 className="mb-3 font-semibold">Tirada compuesta</h2>
@@ -263,7 +297,12 @@ export default function RollPanel({
         <ul className="space-y-2">
           {guardadas.map((g) => (
             <li key={g.id} className="flex items-center justify-between gap-2">
-              <span className="text-sm">{g.name}</span>
+              <span className="text-sm">
+                {g.name}
+                {soyHost && idsTiradasSala.has(g.id) && (
+                  <span className="ml-1 text-xs text-emerald-400">· en sala</span>
+                )}
+              </span>
               <div className="flex gap-2">
                 <button
                   className="btn !px-3 !py-1"
@@ -272,6 +311,23 @@ export default function RollPanel({
                 >
                   Tirar
                 </button>
+                {soyHost && (
+                  <button
+                    className="btn-ghost !px-3 !py-1"
+                    title={
+                      idsTiradasSala.has(g.id)
+                        ? "Quitar de la sala"
+                        : "Compartir con la sala"
+                    }
+                    onClick={() =>
+                      startTransition(() =>
+                        toggleTiradaSala(roomId, g.id, !idsTiradasSala.has(g.id))
+                      )
+                    }
+                  >
+                    {idsTiradasSala.has(g.id) ? "🔓" : "🔒"}
+                  </button>
+                )}
                 <button
                   className="btn-ghost !px-3 !py-1"
                   onClick={() => startTransition(() => borrarTirada(roomId, g.id))}

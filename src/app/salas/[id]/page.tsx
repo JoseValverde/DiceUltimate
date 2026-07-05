@@ -24,6 +24,7 @@ export default async function Sala({ params }: { params: { id: string } }) {
     { data: guardadas },
     { data: misDados },
     { data: dadosSala },
+    { data: tiradasSalaRaw },
   ] = await Promise.all([
     supabase.from("profiles").select("username").eq("id", user!.id).single(),
     supabase
@@ -46,6 +47,10 @@ export default async function Sala({ params }: { params: { id: string } }) {
     supabase
       .from("room_dice")
       .select("dice(id, name, faces)")
+      .eq("room_id", sala.id),
+    supabase
+      .from("room_rolls")
+      .select("saved_rolls(id, name, definition)")
       .eq("room_id", sala.id),
   ]);
 
@@ -70,6 +75,9 @@ export default async function Sala({ params }: { params: { id: string } }) {
   }));
   const listaDadosSala = (dadosSala ?? [])
     .map((rd: any) => rd.dice)
+    .filter(Boolean);
+  const tiradasSala = (tiradasSalaRaw ?? [])
+    .map((rr: any) => rr.saved_rolls)
     .filter(Boolean);
 
   return (
@@ -119,6 +127,7 @@ export default async function Sala({ params }: { params: { id: string } }) {
           guardadas={(guardadas as any) ?? []}
           misDados={(misDados as any) ?? []}
           dadosSala={listaDadosSala as any}
+          tiradasSala={tiradasSala as any}
         />
       </RoomLive>
     </main>

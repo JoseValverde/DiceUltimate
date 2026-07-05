@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 type CookieToSet = { name: string; value: string; options?: CookieOptions };
 
-const RUTAS_PRIVADAS = ["/dashboard", "/salas", "/dados", "/biblioteca", "/admin"];
+const RUTAS_PRIVADAS = ["/dashboard", "/salas", "/dados", "/biblioteca", "/admin", "/perfil"];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });

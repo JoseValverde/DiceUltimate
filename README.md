@@ -12,6 +12,7 @@ dados personalizados, tiradas guardadas y sincronización en vivo.
 - [x] **Fase 2 — Tiempo real**: tiradas propagadas en vivo (Realtime + RLS), presencia de jugadores conectados, historial de sesión compartido
 - [x] **Fase 3 — Dados personalizados**: editor de caras (números y símbolos: éxito, fallo, crítico, blanco, escudo, espada), dados compartibles en sala, tiradas compuestas mixtas y conteo agregado de símbolos
 - [x] **Fase 4 — Biblioteca comunitaria**: publicar configuraciones (dados + tiradas), búsqueda por juego/etiquetas, clonado a cuenta propia y moderación admin (aprobar/destacar/rechazar)
+- [x] **Fase 6 — Mejoras**: invitación directa por usuario/email, dados y tiradas de sala gestionados solo por el anfitrión, perfiles públicos (bio, redes, email opcional), eliminación total de cuenta y catálogo de 36 iconos con nombre libre por cara
 - [x] **Fase 5 — Administración y pulido**: panel `/admin` (usuarios, roles, estadísticas), expulsar/silenciar jugadores y cerrar/reabrir sala desde la UI, trigger anti-escalada de privilegios, guía de despliegue (`docs/despliegue.md`)
 
 ## Puesta en marcha

@@ -38,6 +38,20 @@ export default function DiceEditor({ dados }: { dados: Dado[] }) {
     });
   }
 
+  // Nombre libre de la cara (solo caras de símbolo)
+  function setEtiqueta(i: number, label: string) {
+    setCaras((prev) => {
+      const copia = [...prev];
+      const cara = copia[i];
+      if ("symbol" in cara) {
+        copia[i] = label.trim()
+          ? { symbol: cara.symbol, label: label }
+          : { symbol: cara.symbol };
+      }
+      return copia;
+    });
+  }
+
   function guardar() {
     setError(null);
     startTransition(async () => {
@@ -96,12 +110,20 @@ export default function DiceEditor({ dados }: { dados: Dado[] }) {
                   </option>
                 ))}
               </select>
-              {"value" in cara && (
+              {"value" in cara ? (
                 <input
                   type="number"
                   className="input mt-1 !py-1"
                   value={cara.value}
                   onChange={(e) => setCara(i, e.target.value)}
+                />
+              ) : (
+                <input
+                  className="input mt-1 !py-1"
+                  placeholder="Nombre libre (opcional)"
+                  maxLength={30}
+                  value={cara.label ?? ""}
+                  onChange={(e) => setEtiqueta(i, e.target.value)}
                 />
               )}
             </div>
@@ -148,6 +170,7 @@ export default function DiceEditor({ dados }: { dados: Dado[] }) {
                 {d.faces.map((c, i) => (
                   <span
                     key={i}
+                    title={"symbol" in c ? (c as any).label ?? SIMBOLOS[c.symbol]?.label : undefined}
                     className="inline-flex h-7 min-w-7 items-center justify-center rounded bg-slate-800 px-1 text-xs"
                   >
                     {iconoDeCara(c)}

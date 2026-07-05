@@ -3,10 +3,11 @@
 // Fase 2 — Tiempo real: presencia de jugadores + historial en vivo.
 // Un solo canal por sala: Presence (conectados) y postgres_changes (tiradas).
 import { useEffect, useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { SIMBOLOS, type Simbolo } from "@/lib/dice/catalog";
-import { gestionarMiembro } from "./actions";
+import { SIMBOLOS, iconoDeClave, type Simbolo } from "@/lib/dice/catalog";
+import { gestionarMiembro, invitarMiembro } from "./actions";
 
 export type Miembro = {
   user_id: string;
@@ -26,11 +27,19 @@ export type Tirada = {
   username: string;
 };
 
-function textoResultado(r: { die: string; value?: number; symbol?: string }) {
-  const cara =
-    r.value !== undefined
-      ? String(r.value)
-      : SIMBOLOS[r.symbol as Simbolo]?.icon ?? r.symbol ?? "?";
+function textoResultado(r: {
+  die: string;
+  value?: number;
+  symbol?: string;
+  label?: string;
+}) {
+  let cara: string;
+  if (r.value !== undefined) {
+    cara = String(r.value);
+  } else {
+    const icono = SIMBOLOS[r.symbol as Simbolo]?.icon ?? r.symbol ?? "?";
+    cara = r.label ? `${icono} ${r.label}` : icono;
+  }
   return `${r.die}→${cara}`;
 }
 
@@ -56,11 +65,27 @@ export default function RoomLive({
   const [tiradas, setTiradas] = useState<Tirada[]>(tiradasIniciales);
   const [conectados, setConectados] = useState<Set<string>>(new Set());
   const [pending, startTransition] = useTransition();
+  const [invitado, setInvitado] = useState("");
+  const [msgInvitar, setMsgInvitar] = useState<string | null>(null);
 
   function moderar(targetId: string, cambios: { muted?: boolean; banned?: boolean }) {
     startTransition(async () => {
       await gestionarMiembro(roomId, targetId, cambios);
       router.refresh();
+    });
+  }
+
+  function invitar() {
+    if (!invitado.trim()) return;
+    setMsgInvitar(null);
+    startTransition(async () => {
+      const res = await invitarMiembro(roomId, invitado.trim());
+      if (res?.error) setMsgInvitar(res.error);
+      else {
+        setMsgInvitar(`${res.username} añadido a la sala ✔`);
+        setInvitado("");
+        router.refresh();
+      }
     });
   }
 
@@ -126,7 +151,9 @@ export default function RoomLive({
                 conectados.has(m.user_id) ? "bg-emerald-400" : "bg-slate-600"
               }`}
             />
-            {m.username}
+            <Link href={`/perfil/${m.user_id}`} className="hover:text-indigo-300">
+              {m.username}
+            </Link>
             {m.role === "host" && " 👑"}
             {m.muted && " 🔇"}
             {soyHost && m.user_id !== userId && (
@@ -155,6 +182,31 @@ export default function RoomLive({
           </span>
         ))}
       </div>
+
+      {/* Invitación directa (solo anfitrión) */}
+      {soyHost && (
+        <div className="mb-6 flex flex-wrap items-center gap-2">
+          <input
+            className="input !w-64"
+            placeholder="Invitar por usuario o email…"
+            value={invitado}
+            onChange={(e) => setInvitado(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && invitar()}
+          />
+          <button className="btn" disabled={pending || !invitado.trim()} onClick={invitar}>
+            Invitar
+          </button>
+          {msgInvitar && (
+            <span
+              className={`text-sm ${
+                msgInvitar.includes("✔") ? "text-emerald-400" : "text-red-400"
+              }`}
+            >
+              {msgInvitar}
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         {children}
@@ -188,12 +240,11 @@ export default function RoomLive({
                 {t.symbols && (
                   <p className="text-sm font-medium text-amber-300">
                     {Object.entries(t.symbols)
-                      .map(
-                        ([s, n]) =>
-                          `${SIMBOLOS[s as Simbolo]?.icon ?? s} ${
-                            SIMBOLOS[s as Simbolo]?.label ?? s
-                          } ×${n}`
-                      )
+                      .map(([clave, n]) => {
+                        const icono = iconoDeClave(clave, t.results);
+                        const nombre = SIMBOLOS[clave as Simbolo]?.label ?? clave;
+                        return `${icono} ${nombre} ×${n}`;
+                      })
                       .join(" · ")}
                   </p>
                 )}

@@ -75,6 +75,29 @@ export async function cambiarEstadoSala(roomId: string, abrir: boolean) {
   revalidatePath(`/salas/${roomId}`);
 }
 
+// El anfitrión invita por nombre de usuario o email (RPC valida que sea host)
+export async function invitarMiembro(roomId: string, query: string) {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("invite_member", {
+    p_room: roomId,
+    p_query: query,
+  });
+  revalidatePath(`/salas/${roomId}`);
+  if (error) return { error: error.message };
+  return { ok: true, username: data as string };
+}
+
+// El anfitrión habilita/deshabilita una tirada suya para toda la sala
+export async function toggleTiradaSala(roomId: string, rollId: string, habilitar: boolean) {
+  const supabase = createClient();
+  if (habilitar) {
+    await supabase.from("room_rolls").insert({ room_id: roomId, roll_id: rollId });
+  } else {
+    await supabase.from("room_rolls").delete().match({ room_id: roomId, roll_id: rollId });
+  }
+  revalidatePath(`/salas/${roomId}`);
+}
+
 // El anfitrión habilita/deshabilita un dado suyo para toda la sala
 export async function toggleDadoSala(roomId: string, dieId: string, habilitar: boolean) {
   const supabase = createClient();

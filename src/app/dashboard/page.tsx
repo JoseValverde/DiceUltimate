@@ -41,6 +41,9 @@ export default async function Dashboard({
           <Link href="/dados" className="btn-ghost">
             🎲 Mis dados
           </Link>
+          <Link href="/perfil" className="btn-ghost">
+            👤 Perfil
+          </Link>
           <form action={cerrarSesion}>
             <button className="btn-ghost">Salir</button>
           </form>
