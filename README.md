@@ -11,7 +11,7 @@ dados personalizados, tiradas guardadas y sincronización en vivo.
 - [x] **Fase 1 — MVP**: auth email/Google + roles, salas privadas con código de invitación, motor de tiradas numéricas en servidor (semilla verificable), tiradas guardadas e historial persistido
 - [x] **Fase 2 — Tiempo real**: tiradas propagadas en vivo (Realtime + RLS), presencia de jugadores conectados, historial de sesión compartido
 - [x] **Fase 3 — Dados personalizados**: editor de caras (números y símbolos: éxito, fallo, crítico, blanco, escudo, espada), dados compartibles en sala, tiradas compuestas mixtas y conteo agregado de símbolos
-- [ ] Fase 4 — Biblioteca comunitaria
+- [x] **Fase 4 — Biblioteca comunitaria**: publicar configuraciones (dados + tiradas), búsqueda por juego/etiquetas, clonado a cuenta propia y moderación admin (aprobar/destacar/rechazar)
 - [ ] Fase 5 — Panel de administración
 
 ## Puesta en marcha

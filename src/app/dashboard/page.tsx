@@ -30,6 +30,9 @@ export default async function Dashboard({
           </p>
         </div>
         <div className="flex gap-2">
+          <Link href="/biblioteca" className="btn-ghost">
+            📚 Biblioteca
+          </Link>
           <Link href="/dados" className="btn-ghost">
             🎲 Mis dados
           </Link>
