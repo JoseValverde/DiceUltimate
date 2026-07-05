@@ -1,33 +1,49 @@
 "use client";
 
-// Panel de tiradas: dados rápidos, tirada compuesta y tiradas guardadas
+// Panel de tiradas: dados rápidos, dados personalizados, tirada compuesta y guardadas
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import {
   tirarDados,
   guardarTirada,
   borrarTirada,
+  toggleDadoSala,
   type DefinicionTirada,
+  type ParteTirada,
 } from "./actions";
 
 const DADOS_RAPIDOS = [4, 6, 8, 10, 12, 20, 100];
 
+export type DadoPersonalizado = { id: string; name: string; faces: any[] };
 type Guardada = { id: string; name: string; definition: DefinicionTirada };
 
 export default function RollPanel({
   roomId,
   cerrada,
+  soyHost,
   guardadas,
+  misDados,
+  dadosSala,
 }: {
   roomId: string;
   cerrada: boolean;
+  soyHost: boolean;
   guardadas: Guardada[];
+  misDados: DadoPersonalizado[];
+  dadosSala: DadoPersonalizado[];
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  // Constructor de tirada compuesta
-  const [partes, setPartes] = useState<{ sides: number; count: number }[]>([]);
+  const [partes, setPartes] = useState<ParteTirada[]>([]);
   const [modificador, setModificador] = useState(0);
   const [nombre, setNombre] = useState("");
+
+  const idsSala = new Set(dadosSala.map((d) => d.id));
+  // Dados personalizados que puedo usar aquí: los míos + los habilitados en la sala
+  const usables = [
+    ...misDados,
+    ...dadosSala.filter((d) => !misDados.some((m) => m.id === d.id)),
+  ];
 
   function tirar(def: DefinicionTirada, label?: string) {
     setError(null);
@@ -37,20 +53,27 @@ export default function RollPanel({
     });
   }
 
-  function agregarParte(sides: number) {
+  function agregarParte(parte: ParteTirada) {
     setPartes((prev) => {
-      const i = prev.findIndex((p) => p.sides === sides);
+      const clave = "die_id" in parte ? parte.die_id : `d${parte.sides}`;
+      const i = prev.findIndex(
+        (p) => ("die_id" in p ? p.die_id : `d${(p as any).sides}`) === clave
+      );
       if (i >= 0) {
         const copia = [...prev];
         copia[i] = { ...copia[i], count: copia[i].count + 1 };
         return copia;
       }
-      return [...prev, { sides, count: 1 }];
+      return [...prev, parte];
     });
   }
 
   const textoCompuesta =
-    partes.map((p) => `${p.count}d${p.sides}`).join(" + ") +
+    partes
+      .map((p) =>
+        "die_id" in p ? `${p.count}×${p.nombre ?? "dado"}` : `${p.count}d${p.sides}`
+      )
+      .join(" + ") +
     (modificador ? ` ${modificador > 0 ? "+" : ""}${modificador}` : "");
 
   return (
@@ -83,13 +106,89 @@ export default function RollPanel({
       </div>
 
       <div className="card">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-semibold">Dados personalizados</h2>
+          <Link href="/dados" className="text-xs text-indigo-400 hover:underline">
+            Editar mis dados →
+          </Link>
+        </div>
+        {!usables.length && (
+          <p className="text-sm text-slate-500">
+            Crea dados con símbolos en{" "}
+            <Link href="/dados" className="text-indigo-400 hover:underline">
+              Mis dados
+            </Link>
+            .
+          </p>
+        )}
+        <ul className="space-y-2">
+          {usables.map((d) => (
+            <li key={d.id} className="flex items-center justify-between gap-2">
+              <span className="text-sm">
+                {d.name}{" "}
+                <span className="text-xs text-slate-500">({d.faces.length}c)</span>
+                {idsSala.has(d.id) && (
+                  <span className="ml-1 text-xs text-emerald-400">· en sala</span>
+                )}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  className="btn !px-3 !py-1"
+                  disabled={pending || cerrada}
+                  onClick={() =>
+                    tirar(
+                      { parts: [{ die_id: d.id, count: 1, nombre: d.name }] },
+                      d.name
+                    )
+                  }
+                >
+                  Tirar
+                </button>
+                <button
+                  className="btn-ghost !px-3 !py-1"
+                  disabled={cerrada}
+                  onClick={() =>
+                    agregarParte({ die_id: d.id, count: 1, nombre: d.name })
+                  }
+                >
+                  + compuesta
+                </button>
+                {soyHost && misDados.some((m) => m.id === d.id) && (
+                  <button
+                    className="btn-ghost !px-3 !py-1"
+                    title={
+                      idsSala.has(d.id)
+                        ? "Quitar de la sala"
+                        : "Compartir con la sala"
+                    }
+                    onClick={() =>
+                      startTransition(() =>
+                        toggleDadoSala(roomId, d.id, !idsSala.has(d.id))
+                      )
+                    }
+                  >
+                    {idsSala.has(d.id) ? "🔓" : "🔒"}
+                  </button>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+        {soyHost && misDados.length > 0 && (
+          <p className="mt-2 text-xs text-slate-500">
+            🔒/🔓 comparte tus dados con todos los jugadores de la sala.
+          </p>
+        )}
+      </div>
+
+      <div className="card">
         <h2 className="mb-3 font-semibold">Tirada compuesta</h2>
         <div className="mb-3 flex flex-wrap gap-2">
           {DADOS_RAPIDOS.map((s) => (
             <button
               key={s}
               disabled={cerrada}
-              onClick={() => agregarParte(s)}
+              onClick={() => agregarParte({ sides: s, count: 1 })}
               className="btn-ghost !px-3 !py-1"
             >
               +d{s}
@@ -119,7 +218,13 @@ export default function RollPanel({
               >
                 Tirar
               </button>
-              <button className="btn-ghost" onClick={() => { setPartes([]); setModificador(0); }}>
+              <button
+                className="btn-ghost"
+                onClick={() => {
+                  setPartes([]);
+                  setModificador(0);
+                }}
+              >
                 Limpiar
               </button>
               <input

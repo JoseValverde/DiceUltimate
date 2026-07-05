@@ -4,8 +4,12 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
+export type ParteTirada =
+  | { sides: number; count: number }              // dado numérico estándar
+  | { die_id: string; count: number; nombre?: string }; // dado personalizado
+
 export type DefinicionTirada = {
-  parts: { sides: number; count: number }[];
+  parts: ParteTirada[];
   modifier?: number;
 };
 
@@ -42,5 +46,16 @@ export async function guardarTirada(
 export async function borrarTirada(roomId: string, savedRollId: string) {
   const supabase = createClient();
   await supabase.from("saved_rolls").delete().eq("id", savedRollId);
+  revalidatePath(`/salas/${roomId}`);
+}
+
+// El anfitrión habilita/deshabilita un dado suyo para toda la sala
+export async function toggleDadoSala(roomId: string, dieId: string, habilitar: boolean) {
+  const supabase = createClient();
+  if (habilitar) {
+    await supabase.from("room_dice").insert({ room_id: roomId, die_id: dieId });
+  } else {
+    await supabase.from("room_dice").delete().match({ room_id: roomId, die_id: dieId });
+  }
   revalidatePath(`/salas/${roomId}`);
 }

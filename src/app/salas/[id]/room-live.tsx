@@ -4,6 +4,7 @@
 // Un solo canal por sala: Presence (conectados) y postgres_changes (tiradas).
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { SIMBOLOS, type Simbolo } from "@/lib/dice/catalog";
 
 export type Miembro = {
   user_id: string;
@@ -16,11 +17,20 @@ export type Tirada = {
   id: string;
   user_id: string;
   definition: any;
-  results: { die: string; value: number }[];
-  total: number;
+  results: { die: string; value?: number; symbol?: string }[];
+  total: number | null;
+  symbols: Record<string, number> | null;
   created_at: string;
   username: string;
 };
+
+function textoResultado(r: { die: string; value?: number; symbol?: string }) {
+  const cara =
+    r.value !== undefined
+      ? String(r.value)
+      : SIMBOLOS[r.symbol as Simbolo]?.icon ?? r.symbol ?? "?";
+  return `${r.die}→${cara}`;
+}
 
 export default function RoomLive({
   roomId,
@@ -131,12 +141,26 @@ export default function RoomLive({
                   {t.definition?.label && (
                     <span className="text-indigo-300">{t.definition.label}: </span>
                   )}
-                  {t.results?.map((r) => `${r.die}→${r.value}`).join("  ")}
+                  {t.results?.map(textoResultado).join("  ")}
                   {t.definition?.modifier
                     ? ` (${t.definition.modifier > 0 ? "+" : ""}${t.definition.modifier})`
                     : ""}
                 </p>
-                <p className="text-lg font-bold text-emerald-300">Total: {t.total}</p>
+                {t.total !== null && (
+                  <p className="text-lg font-bold text-emerald-300">Total: {t.total}</p>
+                )}
+                {t.symbols && (
+                  <p className="text-sm font-medium text-amber-300">
+                    {Object.entries(t.symbols)
+                      .map(
+                        ([s, n]) =>
+                          `${SIMBOLOS[s as Simbolo]?.icon ?? s} ${
+                            SIMBOLOS[s as Simbolo]?.label ?? s
+                          } ×${n}`
+                      )
+                      .join(" · ")}
+                  </p>
+                )}
               </li>
             ))}
           </ul>

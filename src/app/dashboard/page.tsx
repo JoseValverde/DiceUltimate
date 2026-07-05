@@ -29,9 +29,14 @@ export default async function Dashboard({
             {profile?.role === "admin" && " · admin"}
           </p>
         </div>
-        <form action={cerrarSesion}>
-          <button className="btn-ghost">Salir</button>
-        </form>
+        <div className="flex gap-2">
+          <Link href="/dados" className="btn-ghost">
+            🎲 Mis dados
+          </Link>
+          <form action={cerrarSesion}>
+            <button className="btn-ghost">Salir</button>
+          </form>
+        </div>
       </header>
 
       {searchParams.error && (

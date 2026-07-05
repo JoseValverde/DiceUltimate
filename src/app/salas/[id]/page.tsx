@@ -16,22 +16,37 @@ export default async function Sala({ params }: { params: { id: string } }) {
     .single();
   if (!sala) notFound();
 
-  const [{ data: perfil }, { data: miembros }, { data: historial }, { data: guardadas }] =
-    await Promise.all([
-      supabase.from("profiles").select("username").eq("id", user!.id).single(),
-      supabase
-        .from("room_members")
-        .select("user_id, role, muted, profiles(username)")
-        .eq("room_id", sala.id)
-        .eq("banned", false),
-      supabase
-        .from("roll_history")
-        .select("id, user_id, definition, results, total, created_at, profiles(username)")
-        .eq("room_id", sala.id)
-        .order("created_at", { ascending: false })
-        .limit(50),
-      supabase.from("saved_rolls").select("id, name, definition").order("name"),
-    ]);
+  const [
+    { data: perfil },
+    { data: miembros },
+    { data: historial },
+    { data: guardadas },
+    { data: misDados },
+    { data: dadosSala },
+  ] = await Promise.all([
+    supabase.from("profiles").select("username").eq("id", user!.id).single(),
+    supabase
+      .from("room_members")
+      .select("user_id, role, muted, profiles(username)")
+      .eq("room_id", sala.id)
+      .eq("banned", false),
+    supabase
+      .from("roll_history")
+      .select("id, user_id, definition, results, total, symbols, created_at, profiles(username)")
+      .eq("room_id", sala.id)
+      .order("created_at", { ascending: false })
+      .limit(50),
+    supabase.from("saved_rolls").select("id, name, definition").order("name"),
+    supabase
+      .from("dice")
+      .select("id, name, faces")
+      .eq("owner_id", user!.id)
+      .order("name"),
+    supabase
+      .from("room_dice")
+      .select("dice(id, name, faces)")
+      .eq("room_id", sala.id),
+  ]);
 
   const soyHost = sala.host_id === user!.id;
 
@@ -48,9 +63,13 @@ export default async function Sala({ params }: { params: { id: string } }) {
     definition: t.definition,
     results: t.results,
     total: t.total,
+    symbols: t.symbols,
     created_at: t.created_at,
     username: t.profiles?.username ?? "¿?",
   }));
+  const listaDadosSala = (dadosSala ?? [])
+    .map((rd: any) => rd.dice)
+    .filter(Boolean);
 
   return (
     <main className="mx-auto max-w-4xl p-4 sm:p-8">
@@ -82,7 +101,10 @@ export default async function Sala({ params }: { params: { id: string } }) {
         <RollPanel
           roomId={sala.id}
           cerrada={sala.status === "closed"}
+          soyHost={soyHost}
           guardadas={(guardadas as any) ?? []}
+          misDados={(misDados as any) ?? []}
+          dadosSala={listaDadosSala as any}
         />
       </RoomLive>
     </main>
