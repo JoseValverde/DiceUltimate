@@ -65,6 +65,26 @@ export async function gestionarMiembro(
   return { ok: true };
 }
 
+// El anfitrión edita nombre, descripción y sistema de juego de la sala
+export async function editarSala(
+  roomId: string,
+  datos: { name: string; game: string; description: string }
+) {
+  const supabase = createClient();
+  if (!datos.name.trim()) return { error: "El nombre no puede estar vacío" };
+  const { error } = await supabase
+    .from("rooms")
+    .update({
+      name: datos.name.trim(),
+      game: datos.game.trim() || null,
+      description: datos.description.trim() || null,
+    })
+    .eq("id", roomId);
+  revalidatePath(`/salas/${roomId}`);
+  if (error) return { error: error.message };
+  return { ok: true };
+}
+
 // El anfitrión cierra o reabre la sala
 export async function cambiarEstadoSala(roomId: string, abrir: boolean) {
   const supabase = createClient();

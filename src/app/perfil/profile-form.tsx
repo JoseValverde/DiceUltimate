@@ -4,12 +4,13 @@
 import { useState, useTransition } from "react";
 import { guardarPerfil, eliminarCuenta } from "./actions";
 
-const REDES: { clave: string; label: string; placeholder: string }[] = [
-  { clave: "web", label: "🌐 Web", placeholder: "https://tuweb.com" },
-  { clave: "instagram", label: "📸 Instagram", placeholder: "https://instagram.com/usuario" },
-  { clave: "x", label: "𝕏 X / Twitter", placeholder: "https://x.com/usuario" },
-  { clave: "youtube", label: "▶️ YouTube", placeholder: "https://youtube.com/@canal" },
-  { clave: "twitch", label: "🎮 Twitch", placeholder: "https://twitch.tv/canal" },
+// Redes con prefijo fijo: el usuario solo escribe su nombre de usuario
+const REDES: { clave: string; label: string; prefijo: string; placeholder: string }[] = [
+  { clave: "web", label: "🌐 Web", prefijo: "", placeholder: "https://tuweb.com" },
+  { clave: "instagram", label: "📸 Instagram", prefijo: "https://www.instagram.com/", placeholder: "usuario" },
+  { clave: "x", label: "𝕏 X / Twitter", prefijo: "https://x.com/", placeholder: "usuario" },
+  { clave: "youtube", label: "▶️ YouTube", prefijo: "https://www.youtube.com/@", placeholder: "canal" },
+  { clave: "twitch", label: "🎮 Twitch", prefijo: "https://www.twitch.tv/", placeholder: "canal" },
 ];
 
 export default function ProfileForm({
@@ -62,9 +63,25 @@ export default function ProfileForm({
         {REDES.map((r) => (
           <label key={r.clave} className="block text-sm text-slate-400">
             {r.label}
-            <input className="input mt-1" placeholder={r.placeholder}
-              value={socials[r.clave] ?? ""}
-              onChange={(e) => setSocials({ ...socials, [r.clave]: e.target.value })} />
+            <span className="mt-1 flex items-center overflow-hidden rounded-lg border border-slate-700 bg-slate-900 focus-within:border-indigo-500">
+              {r.prefijo && (
+                <span className="whitespace-nowrap pl-3 text-slate-500">{r.prefijo}</span>
+              )}
+              <input
+                className="w-full bg-transparent px-2 py-2 text-slate-100 placeholder-slate-600 outline-none"
+                placeholder={r.placeholder}
+                value={socials[r.clave] ?? ""}
+                onChange={(e) =>
+                  setSocials({
+                    ...socials,
+                    // Guardamos solo el nombre de usuario (sin URL ni @)
+                    [r.clave]: r.prefijo
+                      ? e.target.value.replace(/^https?:\/\/[^/]+\/@?/, "").replace(/^@/, "").replace(/\/+$/, "")
+                      : e.target.value,
+                  })
+                }
+              />
+            </span>
           </label>
         ))}
 

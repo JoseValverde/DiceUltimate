@@ -155,21 +155,28 @@ export default function RoomLive({
               {m.username}
             </Link>
             {m.role === "host" && " 👑"}
-            {m.muted && " 🔇"}
+            {/* Estado silenciado, visible para quien no gestiona */}
+            {m.muted && (!soyHost || m.user_id === userId) && " 🔇"}
             {soyHost && m.user_id !== userId && (
-              <span className="ml-1 flex gap-1">
+              <span className="ml-1.5 flex gap-1.5">
+                {/* Altavoz activo = puede hablar (clic para silenciar);
+                    altavoz tachado = silenciado (clic para reactivar) */}
                 <button
-                  title={m.muted ? "Quitar silencio" : "Silenciar"}
+                  title={m.muted ? "Silenciado — clic para quitar el silencio" : "Silenciar a este jugador"}
                   disabled={pending}
-                  className="text-xs opacity-60 transition hover:opacity-100"
+                  className={`rounded-md px-1.5 py-0.5 text-base transition hover:scale-110 ${
+                    m.muted
+                      ? "bg-amber-900/70 ring-1 ring-amber-600"
+                      : "bg-slate-700 hover:bg-slate-600"
+                  }`}
                   onClick={() => moderar(m.user_id, { muted: !m.muted })}
                 >
-                  {m.muted ? "🔊" : "🔇"}
+                  {m.muted ? "🔇" : "🔊"}
                 </button>
                 <button
                   title="Expulsar de la sala"
                   disabled={pending}
-                  className="text-xs opacity-60 transition hover:opacity-100"
+                  className="rounded-md bg-slate-700 px-1.5 py-0.5 text-base transition hover:scale-110 hover:bg-red-900"
                   onClick={() => {
                     if (confirm(`¿Expulsar a ${m.username}? No podrá volver a entrar.`))
                       moderar(m.user_id, { banned: true });

@@ -3,13 +3,19 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-const ETIQUETAS: Record<string, string> = {
-  web: "🌐 Web",
-  instagram: "📸 Instagram",
-  x: "𝕏 X / Twitter",
-  youtube: "▶️ YouTube",
-  twitch: "🎮 Twitch",
+const REDES: Record<string, { label: string; prefijo: string }> = {
+  web: { label: "🌐 Web", prefijo: "" },
+  instagram: { label: "📸 Instagram", prefijo: "https://www.instagram.com/" },
+  x: { label: "𝕏 X / Twitter", prefijo: "https://x.com/" },
+  youtube: { label: "▶️ YouTube", prefijo: "https://www.youtube.com/@" },
+  twitch: { label: "🎮 Twitch", prefijo: "https://www.twitch.tv/" },
 };
+
+// Construye la URL: admite valores antiguos (URL completa) y nuevos (solo usuario)
+function urlDeRed(clave: string, valor: string): string {
+  if (valor.startsWith("http")) return valor;
+  return (REDES[clave]?.prefijo ?? "") + valor;
+}
 
 export default async function PerfilPublico({ params }: { params: { id: string } }) {
   const supabase = createClient();
@@ -50,11 +56,11 @@ export default async function PerfilPublico({ params }: { params: { id: string }
 
         {socials.length > 0 && (
           <ul className="space-y-1 text-sm">
-            {socials.map(([k, url]) => (
+            {socials.map(([k, valor]) => (
               <li key={k}>
-                <a href={url} target="_blank" rel="noopener noreferrer"
+                <a href={urlDeRed(k, valor)} target="_blank" rel="noopener noreferrer"
                   className="text-indigo-400 hover:underline">
-                  {ETIQUETAS[k] ?? k}: {url}
+                  {REDES[k]?.label ?? k}: {valor.startsWith("http") ? valor : `@${valor}`}
                 </a>
               </li>
             ))}

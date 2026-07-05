@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import RollPanel from "./roll-panel";
 import RoomLive, { type Miembro, type Tirada } from "./room-live";
+import EditRoom from "./edit-room";
 import { cambiarEstadoSala } from "./actions";
 
 export default async function Sala({ params }: { params: { id: string } }) {
@@ -12,7 +13,7 @@ export default async function Sala({ params }: { params: { id: string } }) {
 
   const { data: sala } = await supabase
     .from("rooms")
-    .select("id, name, game, status, invite_code, host_id")
+    .select("id, name, game, description, status, invite_code, host_id")
     .eq("id", params.id)
     .single();
   if (!sala) notFound();
@@ -88,26 +89,43 @@ export default async function Sala({ params }: { params: { id: string } }) {
             ← Dashboard
           </Link>
           <h1 className="text-2xl font-bold">{sala.name}</h1>
-          <p className="text-sm text-slate-400">{sala.game || "Sin juego asociado"}</p>
+          {sala.game && (
+            <p className="text-sm">
+              <span className="rounded bg-indigo-950 px-2 py-0.5 text-indigo-300">
+                🎮 {sala.game}
+              </span>
+            </p>
+          )}
+          {sala.description && (
+            <p className="mt-1 max-w-md text-sm text-slate-400">{sala.description}</p>
+          )}
         </div>
         {soyHost && (
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="card !p-3 text-sm">
               <p className="text-slate-400">Código de invitación</p>
               <p className="font-mono text-lg tracking-wider text-indigo-300">
                 {sala.invite_code}
               </p>
             </div>
-            <form
-              action={async () => {
-                "use server";
-                await cambiarEstadoSala(sala.id, sala.status === "closed");
-              }}
-            >
-              <button className="btn-ghost">
-                {sala.status === "open" ? "Cerrar sala" : "Reabrir sala"}
-              </button>
-            </form>
+            <div className="flex flex-col gap-2">
+              <EditRoom
+                roomId={sala.id}
+                name={sala.name}
+                game={sala.game}
+                description={sala.description}
+              />
+              <form
+                action={async () => {
+                  "use server";
+                  await cambiarEstadoSala(sala.id, sala.status === "closed");
+                }}
+              >
+                <button className="btn-ghost !px-3 !py-1 text-sm">
+                  {sala.status === "open" ? "Cerrar sala" : "Reabrir sala"}
+                </button>
+              </form>
+            </div>
           </div>
         )}
       </header>
