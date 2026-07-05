@@ -2,9 +2,11 @@
 
 // Fase 2 — Tiempo real: presencia de jugadores + historial en vivo.
 // Un solo canal por sala: Presence (conectados) y postgres_changes (tiradas).
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { SIMBOLOS, type Simbolo } from "@/lib/dice/catalog";
+import { gestionarMiembro } from "./actions";
 
 export type Miembro = {
   user_id: string;
@@ -36,6 +38,7 @@ export default function RoomLive({
   roomId,
   userId,
   username,
+  soyHost,
   miembros,
   tiradasIniciales,
   children,
@@ -43,13 +46,23 @@ export default function RoomLive({
   roomId: string;
   userId: string;
   username: string;
+  soyHost: boolean;
   miembros: Miembro[];
   tiradasIniciales: Tirada[];
   children: React.ReactNode; // Panel de tiradas (columna izquierda)
 }) {
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [tiradas, setTiradas] = useState<Tirada[]>(tiradasIniciales);
   const [conectados, setConectados] = useState<Set<string>>(new Set());
+  const [pending, startTransition] = useTransition();
+
+  function moderar(targetId: string, cambios: { muted?: boolean; banned?: boolean }) {
+    startTransition(async () => {
+      await gestionarMiembro(roomId, targetId, cambios);
+      router.refresh();
+    });
+  }
 
   useEffect(() => {
     // Mapa user_id → username para resolver el autor de cada tirada
@@ -116,6 +129,29 @@ export default function RoomLive({
             {m.username}
             {m.role === "host" && " 👑"}
             {m.muted && " 🔇"}
+            {soyHost && m.user_id !== userId && (
+              <span className="ml-1 flex gap-1">
+                <button
+                  title={m.muted ? "Quitar silencio" : "Silenciar"}
+                  disabled={pending}
+                  className="text-xs opacity-60 transition hover:opacity-100"
+                  onClick={() => moderar(m.user_id, { muted: !m.muted })}
+                >
+                  {m.muted ? "🔊" : "🔇"}
+                </button>
+                <button
+                  title="Expulsar de la sala"
+                  disabled={pending}
+                  className="text-xs opacity-60 transition hover:opacity-100"
+                  onClick={() => {
+                    if (confirm(`¿Expulsar a ${m.username}? No podrá volver a entrar.`))
+                      moderar(m.user_id, { banned: true });
+                  }}
+                >
+                  ⛔
+                </button>
+              </span>
+            )}
           </span>
         ))}
       </div>

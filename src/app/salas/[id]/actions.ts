@@ -49,6 +49,32 @@ export async function borrarTirada(roomId: string, savedRollId: string) {
   revalidatePath(`/salas/${roomId}`);
 }
 
+// El anfitrión silencia o expulsa a un miembro (RLS: solo host)
+export async function gestionarMiembro(
+  roomId: string,
+  userId: string,
+  cambios: { muted?: boolean; banned?: boolean }
+) {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("room_members")
+    .update(cambios)
+    .match({ room_id: roomId, user_id: userId });
+  revalidatePath(`/salas/${roomId}`);
+  if (error) return { error: error.message };
+  return { ok: true };
+}
+
+// El anfitrión cierra o reabre la sala
+export async function cambiarEstadoSala(roomId: string, abrir: boolean) {
+  const supabase = createClient();
+  await supabase
+    .from("rooms")
+    .update({ status: abrir ? "open" : "closed" })
+    .eq("id", roomId);
+  revalidatePath(`/salas/${roomId}`);
+}
+
 // El anfitrión habilita/deshabilita un dado suyo para toda la sala
 export async function toggleDadoSala(roomId: string, dieId: string, habilitar: boolean) {
   const supabase = createClient();

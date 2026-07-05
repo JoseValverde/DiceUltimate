@@ -30,6 +30,11 @@ export default async function Dashboard({
           </p>
         </div>
         <div className="flex gap-2">
+          {profile?.role === "admin" && (
+            <Link href="/admin" className="btn-ghost">
+              ⚙️ Admin
+            </Link>
+          )}
           <Link href="/biblioteca" className="btn-ghost">
             📚 Biblioteca
           </Link>

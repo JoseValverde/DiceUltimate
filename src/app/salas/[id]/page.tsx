@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import RollPanel from "./roll-panel";
 import RoomLive, { type Miembro, type Tirada } from "./room-live";
+import { cambiarEstadoSala } from "./actions";
 
 export default async function Sala({ params }: { params: { id: string } }) {
   const supabase = createClient();
@@ -82,11 +83,23 @@ export default async function Sala({ params }: { params: { id: string } }) {
           <p className="text-sm text-slate-400">{sala.game || "Sin juego asociado"}</p>
         </div>
         {soyHost && (
-          <div className="card !p-3 text-sm">
-            <p className="text-slate-400">Código de invitación</p>
-            <p className="font-mono text-lg tracking-wider text-indigo-300">
-              {sala.invite_code}
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="card !p-3 text-sm">
+              <p className="text-slate-400">Código de invitación</p>
+              <p className="font-mono text-lg tracking-wider text-indigo-300">
+                {sala.invite_code}
+              </p>
+            </div>
+            <form
+              action={async () => {
+                "use server";
+                await cambiarEstadoSala(sala.id, sala.status === "closed");
+              }}
+            >
+              <button className="btn-ghost">
+                {sala.status === "open" ? "Cerrar sala" : "Reabrir sala"}
+              </button>
+            </form>
           </div>
         )}
       </header>
@@ -95,6 +108,7 @@ export default async function Sala({ params }: { params: { id: string } }) {
         roomId={sala.id}
         userId={user!.id}
         username={perfil?.username ?? "¿?"}
+        soyHost={soyHost}
         miembros={listaMiembros}
         tiradasIniciales={tiradasIniciales}
       >
